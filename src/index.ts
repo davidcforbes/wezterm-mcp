@@ -4,8 +4,6 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
-  ListPromptsRequestSchema,
-  GetPromptRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import WeztermExecutor from "./wezterm_executor.js";
 import WeztermOutputReader from "./wezterm_output_reader.js";
@@ -20,7 +18,6 @@ const server = new Server(
   {
     capabilities: {
       tools: {},
-      prompts: {},
     },
   }
 );
@@ -199,94 +196,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request: any) => {
       isError: true,
     };
   }
-});
-
-// Prompt handlers for statusline support
-server.setRequestHandler(ListPromptsRequestSchema, async () => {
-  return {
-    prompts: [
-      {
-        name: "statusline",
-        description: "Provides current terminal context for the statusline display",
-      },
-    ],
-  };
-});
-
-server.setRequestHandler(GetPromptRequestSchema, async (request: any) => {
-  if (request.params.name === "statusline") {
-    try {
-      const executor = new WeztermExecutor();
-      const outputReader = new WeztermOutputReader();
-      
-      // Get list of panes to find active pane info
-      const panesResult = await executor.listPanes();
-      const panesText = panesResult.content[0]?.text || "";
-      
-      // Parse panes to get active pane info
-      let activePaneInfo = "Unknown";
-      const paneLines = panesText.split('\n');
-      for (const line of paneLines) {
-        if (line.includes('(active)')) {
-          activePaneInfo = line.trim();
-          break;
-        }
-      }
-      
-      // Read current terminal output to get working directory
-      const outputResult = await outputReader.readOutput(30);
-      const outputText = outputResult.content[0]?.text || "";
-      
-      // Try to extract current directory from prompt
-      let currentDir = "Unknown";
-      const lines = outputText.trim().split('\n');
-      const lastLine = lines[lines.length - 1];
-      
-      // Try to match common prompt patterns that show directory
-      const dirPatterns = [
-        /(?:^|\s)([A-Za-z]:\\[^\s>$]+)/,  // Windows path
-        /(?:^|\s)(\/[^\s>$]+)/,            // Unix path
-        /(?:^|\s)~([^\s>$]*)/,             // Home directory
-      ];
-      
-      for (const pattern of dirPatterns) {
-        const match = lastLine.match(pattern);
-        if (match) {
-          currentDir = match[1] || match[0].trim();
-          break;
-        }
-      }
-      
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: `Terminal Context:
-📁 Current Directory: ${currentDir}
-🖥️  Active Pane: ${activePaneInfo}
-⚡ WezTerm MCP Server: Connected`,
-            },
-          },
-        ],
-      };
-    } catch (error: unknown) {
-      return {
-        messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: `Terminal Context: Error - ${getErrorMessage(error)}`,
-            },
-          },
-        ],
-      };
-    }
-  }
-  
-  throw new Error(`Unknown prompt: ${request.params.name}`);
 });
 
 async function main() {

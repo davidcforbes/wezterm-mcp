@@ -192,6 +192,76 @@ Writes text to a specific pane by ID.
 }
 ```
 
+## Statusline Integration
+
+This server includes statusline scripts for Claude Code that display terminal context in your statusline.
+
+### Setup
+
+**1. Choose the appropriate script for your platform:**
+- Unix/Linux/Mac: `statusline.sh`
+- Windows: `statusline.ps1`
+
+**2. Make the script executable (Unix/Linux/Mac only):**
+```bash
+chmod +x statusline.sh
+```
+
+**3. Configure in your `.claude/settings.json`:**
+
+**For Unix/Linux/Mac:**
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "/absolute/path/to/wezterm-mcp/statusline.sh"
+  }
+}
+```
+
+**For Windows:**
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "powershell.exe -NoProfile -File C:\\absolute\\path\\to\\wezterm-mcp\\statusline.ps1"
+  }
+}
+```
+
+**4. Alternatively, use Claude Code's built-in setup:**
+```
+/statusline
+```
+Then provide the path to the statusline script when prompted.
+
+### What the Statusline Shows
+
+- ⚡ Current Claude model
+- 📁 Current working directory
+- 🖥️  Active WezTerm pane ID
+
+### Requirements
+
+- **WezTerm must be running** with mux server enabled
+- **jq** recommended (optional, for Unix/Linux/Mac script)
+
+### Troubleshooting Statusline
+
+**Statusline not appearing:**
+- Verify the script path is absolute (not relative)
+- Check script permissions (Unix/Linux/Mac: `chmod +x statusline.sh`)
+- Ensure WezTerm is running with mux server enabled
+- Test the script manually:
+  ```bash
+  echo '{"model":{"display_name":"Test"},"workspace":{"current_dir":"/test"}}' | ./statusline.sh
+  ```
+
+**Pane info shows "Unknown":**
+- Verify `wezterm cli list` works in your terminal
+- Check WezTerm mux server configuration
+- Ensure WezTerm is running
+
 ## Troubleshooting
 
 ### "Failed to write to terminal" or "WezTerm not available"
