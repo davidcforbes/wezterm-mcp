@@ -77,7 +77,21 @@ export default class WeztermOutputReader {
         content: [
           {
             type: "text",
-            text: `Failed to read terminal output: ${error.message}\n\nTroubleshooting:\n- Make sure WezTerm is running\n- Verify the mux server is enabled in your WezTerm config\n- Run 'wezterm cli list' to test connectivity\n- Check if requested lines (${lines}) is reasonable`,
+            text: `Failed to read terminal output: ${error.message}
+
+Troubleshooting Steps:
+1. Verify WezTerm is running and you have an active terminal session
+2. Enable mux server in ~/.wezterm.lua:
+   unix_domains = { { name = "unix" } }
+   default_gui_startup_args = { "connect", "unix" }
+3. Restart WezTerm after config changes
+4. Test connectivity: run 'wezterm cli list' in terminal
+   - Should list panes without error
+   - If fails, mux server is not enabled
+5. Check if requested lines (${lines}) exceeds available output
+6. Verify WEZTERM_CLI_PATH environment variable if using custom path
+
+For more help, see: https://wezfurlong.org/wezterm/cli/cli/index.html`,
           },
         ],
       };

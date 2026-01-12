@@ -72,7 +72,21 @@ export default class WeztermExecutor {
         content: [
           {
             type: "text",
-            text: `Failed to write to terminal: ${error.message}\n\nTroubleshooting:\n- Make sure WezTerm is running\n- Verify the mux server is enabled in your WezTerm config\n- Run 'wezterm cli list' to test CLI connectivity`,
+            text: `Failed to write to terminal: ${error.message}
+
+Troubleshooting Steps:
+1. Verify WezTerm is running with an active terminal session
+2. Enable mux server in ~/.wezterm.lua:
+   unix_domains = { { name = "unix" } }
+   default_gui_startup_args = { "connect", "unix" }
+3. Restart WezTerm after config changes
+4. Test connectivity: run 'wezterm cli list' in terminal
+   - Should list panes without error
+   - If fails, mux server is not enabled
+5. Check if command is valid and not too long
+6. Verify active pane exists and is responsive
+
+For more help, see: https://wezfurlong.org/wezterm/cli/cli/send-text.html`,
           },
         ],
       };
@@ -116,7 +130,22 @@ export default class WeztermExecutor {
         content: [
           {
             type: "text",
-            text: `Failed to write to pane ${paneId}: ${error.message}\n\nTroubleshooting:\n- Verify pane ${paneId} exists (use list_panes tool)\n- Make sure WezTerm is running and mux server is enabled`,
+            text: `Failed to write to pane ${paneId}: ${error.message}
+
+Troubleshooting Steps:
+1. Verify pane ${paneId} exists: use list_panes tool to see all pane IDs
+2. Check if pane was closed or crashed
+3. Ensure WezTerm is running with mux server enabled (see ~/.wezterm.lua)
+4. Test connectivity: run 'wezterm cli list' in terminal
+5. Verify pane ID is correct (non-negative integer)
+6. Try switching to pane first: use switch_pane tool
+
+Common causes:
+- Pane was closed after getting its ID
+- Typo in pane ID number
+- Mux server not running
+
+For more help, see: https://wezfurlong.org/wezterm/cli/cli/send-text.html`,
           },
         ],
       };
@@ -143,7 +172,21 @@ export default class WeztermExecutor {
         content: [
           {
             type: "text",
-            text: `Failed to list panes: ${error.message}\n\nTroubleshooting:\n- Make sure WezTerm is running\n- Verify the mux server is enabled in your WezTerm config\n- Run 'wezterm cli list' manually to test`,
+            text: `Failed to list panes: ${error.message}
+
+Troubleshooting Steps:
+1. Verify WezTerm is running with at least one window open
+2. Enable mux server in ~/.wezterm.lua:
+   unix_domains = { { name = "unix" } }
+   default_gui_startup_args = { "connect", "unix" }
+3. Restart WezTerm after config changes
+4. Test connectivity: run 'wezterm cli list' in terminal
+   - Should show panes without error
+   - If fails, mux server is not running
+5. Check WezTerm version (must support CLI)
+6. Verify WEZTERM_CLI_PATH if using custom installation
+
+For more help, see: https://wezfurlong.org/wezterm/cli/cli/list.html`,
           },
         ],
       };
@@ -178,7 +221,22 @@ export default class WeztermExecutor {
         content: [
           {
             type: "text",
-            text: `Failed to switch pane: ${error.message}\n\nTroubleshooting:\n- Verify pane ${paneId} exists (use list_panes tool)\n- Check for typos in pane ID`,
+            text: `Failed to switch pane: ${error.message}
+
+Troubleshooting Steps:
+1. Verify pane ${paneId} exists: use list_panes tool to see all pane IDs
+2. Check if pane was closed or moved to different window
+3. Ensure pane ID is correct (non-negative integer, not a typo)
+4. Verify WezTerm is running with mux server enabled
+5. Test connectivity: run 'wezterm cli list' in terminal
+
+Common causes:
+- Pane ${paneId} was closed
+- Wrong pane ID (check list_panes output)
+- Mux server not running
+- Pane in different WezTerm window
+
+For more help, see: https://wezfurlong.org/wezterm/cli/cli/activate-pane.html`,
           },
         ],
       };

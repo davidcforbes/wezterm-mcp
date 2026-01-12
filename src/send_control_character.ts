@@ -93,7 +93,25 @@ export default class SendControlCharacter {
         content: [
           {
             type: "text",
-            text: `Failed to send control character: ${error.message}\n\nTroubleshooting:\n- Make sure WezTerm is running\n- Verify the mux server is enabled\n- Run 'wezterm cli list' to test connectivity`,
+            text: `Failed to send control character: ${error.message}
+
+Troubleshooting Steps:
+1. Verify WezTerm is running with an active terminal session
+2. Enable mux server in ~/.wezterm.lua:
+   unix_domains = { { name = "unix" } }
+   default_gui_startup_args = { "connect", "unix" }
+3. Restart WezTerm after config changes
+4. Test connectivity: run 'wezterm cli list' in terminal
+   - Should list panes without error
+   - If fails, mux server is not enabled
+5. Verify the control character is supported (a-z except h,i,j,m,o)
+6. Check target pane is still open and responsive
+
+Common control characters:
+- 'c' = Ctrl+C (interrupt), 'd' = Ctrl+D (EOF), 'z' = Ctrl+Z (suspend)
+- 'l' = Ctrl+L (clear), 'r' = Ctrl+R (search history)
+
+For more help, see: https://wezfurlong.org/wezterm/cli/cli/send-text.html`,
           },
         ],
       };
