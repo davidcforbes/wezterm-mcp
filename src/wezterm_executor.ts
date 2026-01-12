@@ -1,32 +1,69 @@
 import { exec } from "child_process";
 import { promisify } from "util";
+import * as shellQuote from "shell-quote";
 
 const execAsync = promisify(exec);
 
+// Configuration constants
+const DEFAULT_TIMEOUT_MS = 30000;
+const MAX_OUTPUT_SIZE = 1024 * 1024; // 1MB
+
 export default class WeztermExecutor {
   private weztermCli: string;
+  private timeoutMs: number;
 
-  constructor() {
-    this.weztermCli = "wezterm cli";
+  constructor(timeoutMs: number = DEFAULT_TIMEOUT_MS) {
+    this.weztermCli = process.env.WEZTERM_CLI_PATH || "wezterm cli";
+    this.timeoutMs = timeoutMs;
+  }
+
+  /**
+   * Validates that paneId is a valid positive integer
+   */
+  private validatePaneId(paneId: number): void {
+    if (!Number.isInteger(paneId) || paneId < 0) {
+      throw new Error(
+        `Invalid pane ID: ${paneId}. Pane ID must be a non-negative integer.`
+      );
+    }
+  }
+
+  /**
+   * Executes a command with timeout and output size limits
+   */
+  private async execWithLimits(
+    command: string,
+    timeoutMs?: number
+  ): Promise<{ stdout: string; stderr: string }> {
+    return execAsync(command, {
+      timeout: timeoutMs || this.timeoutMs,
+      maxBuffer: MAX_OUTPUT_SIZE,
+    });
   }
 
   async writeToTerminal(command: string): Promise<{ content: any[] }> {
     try {
-      // 現在のアクティブペインを確認
-      const { stdout: paneInfo } = await execAsync(`${this.weztermCli} list`);
+      // Validate input
+      if (typeof command !== "string") {
+        throw new Error("Command must be a string");
+      }
 
-      // WezTerm CLIを使用してアクティブなペインにテキストを送信
-      // コマンドと改行を一緒に送信して確実に実行
-      const escapedCommand = command.replace(/'/g, "'\"'\"'");
-      await execAsync(
-        `${this.weztermCli} send-text --no-paste '${escapedCommand}\n'`
-      );
+      // Use shell-quote for proper escaping
+      const args = [
+        ...this.weztermCli.split(" "),
+        "send-text",
+        "--no-paste",
+        `${command}\n`,
+      ];
+      const escapedCommand = shellQuote.quote(args);
+
+      await this.execWithLimits(escapedCommand);
 
       return {
         content: [
           {
             type: "text",
-            text: `Command sent to WezTerm: ${command}\n\nCurrent panes:\n${paneInfo}`,
+            text: `Command sent to WezTerm: ${command}`,
           },
         ],
       };
@@ -35,7 +72,7 @@ export default class WeztermExecutor {
         content: [
           {
             type: "text",
-            text: `Failed to write to terminal: ${error.message}\nMake sure WezTerm is running and the mux server is enabled.`,
+            text: `Failed to write to terminal: ${error.message}\n\nTroubleshooting:\n- Make sure WezTerm is running\n- Verify the mux server is enabled in your WezTerm config\n- Run 'wezterm cli list' to test CLI connectivity`,
           },
         ],
       };
@@ -47,11 +84,24 @@ export default class WeztermExecutor {
     paneId: number
   ): Promise<{ content: any[] }> {
     try {
-      // 指定されたペインにコマンドを送信
-      const escapedCommand = command.replace(/'/g, "'\"'\"'");
-      await execAsync(
-        `${this.weztermCli} send-text --pane-id ${paneId} --no-paste '${escapedCommand}\n'`
-      );
+      // Validate inputs
+      if (typeof command !== "string") {
+        throw new Error("Command must be a string");
+      }
+      this.validatePaneId(paneId);
+
+      // Use shell-quote for proper escaping
+      const args = [
+        ...this.weztermCli.split(" "),
+        "send-text",
+        "--pane-id",
+        paneId.toString(),
+        "--no-paste",
+        `${command}\n`,
+      ];
+      const escapedCommand = shellQuote.quote(args);
+
+      await this.execWithLimits(escapedCommand);
 
       return {
         content: [
@@ -66,7 +116,7 @@ export default class WeztermExecutor {
         content: [
           {
             type: "text",
-            text: `Failed to write to pane ${paneId}: ${error.message}`,
+            text: `Failed to write to pane ${paneId}: ${error.message}\n\nTroubleshooting:\n- Verify pane ${paneId} exists (use list_panes tool)\n- Make sure WezTerm is running and mux server is enabled`,
           },
         ],
       };
@@ -75,8 +125,11 @@ export default class WeztermExecutor {
 
   async listPanes(): Promise<{ content: any[] }> {
     try {
-      // 正しいコマンドは 'list' です
-      const { stdout } = await execAsync(`${this.weztermCli} list`);
+      const args = [...this.weztermCli.split(" "), "list"];
+      const escapedCommand = shellQuote.quote(args);
+
+      const { stdout } = await this.execWithLimits(escapedCommand);
+
       return {
         content: [
           {
@@ -90,7 +143,7 @@ export default class WeztermExecutor {
         content: [
           {
             type: "text",
-            text: `Failed to list panes: ${error.message}\nMake sure WezTerm is running and the mux server is enabled.`,
+            text: `Failed to list panes: ${error.message}\n\nTroubleshooting:\n- Make sure WezTerm is running\n- Verify the mux server is enabled in your WezTerm config\n- Run 'wezterm cli list' manually to test`,
           },
         ],
       };
@@ -99,8 +152,19 @@ export default class WeztermExecutor {
 
   async switchPane(paneId: number): Promise<{ content: any[] }> {
     try {
-      // activate-paneコマンドの正しい形式を使用
-      await execAsync(`${this.weztermCli} activate-pane --pane-id ${paneId}`);
+      // Validate input
+      this.validatePaneId(paneId);
+
+      const args = [
+        ...this.weztermCli.split(" "),
+        "activate-pane",
+        "--pane-id",
+        paneId.toString(),
+      ];
+      const escapedCommand = shellQuote.quote(args);
+
+      await this.execWithLimits(escapedCommand);
+
       return {
         content: [
           {
@@ -114,7 +178,7 @@ export default class WeztermExecutor {
         content: [
           {
             type: "text",
-            text: `Failed to switch pane: ${error.message}\nMake sure the pane ID ${paneId} exists.`,
+            text: `Failed to switch pane: ${error.message}\n\nTroubleshooting:\n- Verify pane ${paneId} exists (use list_panes tool)\n- Check for typos in pane ID`,
           },
         ],
       };

@@ -1,56 +1,68 @@
 import { exec } from "child_process";
 import { promisify } from "util";
+import * as shellQuote from "shell-quote";
 
 const execAsync = promisify(exec);
 
+const DEFAULT_TIMEOUT_MS = 30000;
+const MAX_OUTPUT_SIZE = 1024 * 1024; // 1MB
+const DEFAULT_OUTPUT_LINES = 50;
+const MAX_OUTPUT_LINES = 10000;
+
 export default class WeztermOutputReader {
   private weztermCli: string;
+  private timeoutMs: number;
 
-  constructor() {
-    this.weztermCli = "wezterm cli";
+  constructor(timeoutMs: number = DEFAULT_TIMEOUT_MS) {
+    this.weztermCli = process.env.WEZTERM_CLI_PATH || "wezterm cli";
+    this.timeoutMs = timeoutMs;
   }
 
-  async readOutput(lines: number = 50): Promise<{ content: any[] }> {
-    try {
-      let command: string;
+  /**
+   * Validates the lines parameter
+   */
+  private validateLines(lines: number): void {
+    if (!Number.isInteger(lines)) {
+      throw new Error(
+        `Lines must be an integer, got: ${lines} (type: ${typeof lines})`
+      );
+    }
 
-      if (lines <= 0) {
-        // 全ての内容を取得（現在の画面のみ）
-        command = `${this.weztermCli} get-text --escapes`;
-      } else {
-        // 指定された行数分を取得（スクロールバックから）
-        const startLine = -lines;
-        command = `${this.weztermCli} get-text --escapes --start-line ${startLine}`;
-      }
-
-      const { stdout } = await execAsync(command);
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: stdout || "(empty output)",
-          },
-        ],
-      };
-    } catch (error: any) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Failed to read terminal output: ${error.message}\nMake sure WezTerm is running and the mux server is enabled.\nTry running: wezterm cli list`,
-          },
-        ],
-      };
+    if (lines > MAX_OUTPUT_LINES) {
+      throw new Error(
+        `Lines cannot exceed ${MAX_OUTPUT_LINES} (requested: ${lines})`
+      );
     }
   }
 
-  // 現在の画面内容のみを取得する新しいメソッド
-  async readCurrentScreen(): Promise<{ content: any[] }> {
+  async readOutput(lines: number = DEFAULT_OUTPUT_LINES): Promise<{ content: any[] }> {
     try {
-      const { stdout } = await execAsync(
-        `${this.weztermCli} get-text --escapes`
-      );
+      // Validate input
+      this.validateLines(lines);
+
+      let args: string[];
+
+      if (lines <= 0) {
+        // Get all content (current screen only)
+        args = [...this.weztermCli.split(" "), "get-text", "--escapes"];
+      } else {
+        // Get specified number of lines (from scrollback)
+        const startLine = -lines;
+        args = [
+          ...this.weztermCli.split(" "),
+          "get-text",
+          "--escapes",
+          "--start-line",
+          startLine.toString(),
+        ];
+      }
+
+      const escapedCommand = shellQuote.quote(args);
+
+      const { stdout } = await execAsync(escapedCommand, {
+        timeout: this.timeoutMs,
+        maxBuffer: MAX_OUTPUT_SIZE,
+      });
 
       return {
         content: [
@@ -65,7 +77,7 @@ export default class WeztermOutputReader {
         content: [
           {
             type: "text",
-            text: `Failed to read current screen: ${error.message}`,
+            text: `Failed to read terminal output: ${error.message}\n\nTroubleshooting:\n- Make sure WezTerm is running\n- Verify the mux server is enabled in your WezTerm config\n- Run 'wezterm cli list' to test connectivity\n- Check if requested lines (${lines}) is reasonable`,
           },
         ],
       };

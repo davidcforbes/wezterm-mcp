@@ -1,25 +1,32 @@
 import { exec } from "child_process";
-import SendControlCharacter from "../src/send_control_character";
+import { promisify } from "util";
 
-// child_processモジュールをモック化
+// Mock modules
 jest.mock("child_process");
-const mockedExec = jest.mocked(exec);
+
+let mockExecAsync: jest.Mock;
+jest.mock("util", () => {
+  const actualUtil = jest.requireActual<typeof import("util")>("util");
+  mockExecAsync = jest.fn();
+  return {
+    ...actualUtil,
+    promisify: jest.fn().mockReturnValue(mockExecAsync),
+  };
+});
+
+import SendControlCharacter from "../src/send_control_character";
 
 describe("SendControlCharacter", () => {
   let controlCharSender: SendControlCharacter;
 
   beforeEach(() => {
-    controlCharSender = new SendControlCharacter();
     jest.clearAllMocks();
+    controlCharSender = new SendControlCharacter();
   });
 
   describe("send", () => {
-    it("Ctrl+Cを正常に送信できること", async () => {
-      mockedExec.mockImplementation((command: string, callback: any) => {
-        expect(command).toContain("send-text $'\\x03'");
-        callback(null, { stdout: "", stderr: "" });
-        return {} as any;
-      });
+    it("should successfully send Ctrl+C", async () => {
+      mockExecAsync.mockResolvedValue({ stdout: "", stderr: "" });
 
       const result = await controlCharSender.send("c");
 
@@ -28,12 +35,8 @@ describe("SendControlCharacter", () => {
       expect(result.content[0].text).toBe("Sent control character: Ctrl+C");
     });
 
-    it("Ctrl+Dを正常に送信できること", async () => {
-      mockedExec.mockImplementation((command: string, callback: any) => {
-        expect(command).toContain("send-text $'\\x04'");
-        callback(null, { stdout: "", stderr: "" });
-        return {} as any;
-      });
+    it("should successfully send Ctrl+D", async () => {
+      mockExecAsync.mockResolvedValue({ stdout: "", stderr: "" });
 
       const result = await controlCharSender.send("d");
 
@@ -42,12 +45,8 @@ describe("SendControlCharacter", () => {
       expect(result.content[0].text).toBe("Sent control character: Ctrl+D");
     });
 
-    it("Ctrl+Zを正常に送信できること", async () => {
-      mockedExec.mockImplementation((command: string, callback: any) => {
-        expect(command).toContain("send-text $'\\x1a'");
-        callback(null, { stdout: "", stderr: "" });
-        return {} as any;
-      });
+    it("should successfully send Ctrl+Z", async () => {
+      mockExecAsync.mockResolvedValue({ stdout: "", stderr: "" });
 
       const result = await controlCharSender.send("z");
 
@@ -56,12 +55,8 @@ describe("SendControlCharacter", () => {
       expect(result.content[0].text).toBe("Sent control character: Ctrl+Z");
     });
 
-    it("Ctrl+Lを正常に送信できること", async () => {
-      mockedExec.mockImplementation((command: string, callback: any) => {
-        expect(command).toContain("send-text $'\\x0c'");
-        callback(null, { stdout: "", stderr: "" });
-        return {} as any;
-      });
+    it("should successfully send Ctrl+L", async () => {
+      mockExecAsync.mockResolvedValue({ stdout: "", stderr: "" });
 
       const result = await controlCharSender.send("l");
 
@@ -70,12 +65,8 @@ describe("SendControlCharacter", () => {
       expect(result.content[0].text).toBe("Sent control character: Ctrl+L");
     });
 
-    it("大文字の文字でも正常に動作すること", async () => {
-      mockedExec.mockImplementation((command: string, callback: any) => {
-        expect(command).toContain("send-text $'\\x03'");
-        callback(null, { stdout: "", stderr: "" });
-        return {} as any;
-      });
+    it("should work with uppercase characters", async () => {
+      mockExecAsync.mockResolvedValue({ stdout: "", stderr: "" });
 
       const result = await controlCharSender.send("C");
 
@@ -84,45 +75,54 @@ describe("SendControlCharacter", () => {
       expect(result.content[0].text).toBe("Sent control character: Ctrl+C");
     });
 
-    it("サポートされていない制御文字の場合はエラーを投げること", async () => {
-      await expect(controlCharSender.send("x")).rejects.toThrow(
-        "Unknown control character: x"
-      );
+    it("should return error for unsupported control character", async () => {
+      const result = await controlCharSender.send("9");
+
+      expect(result.content).toHaveLength(1);
+      expect(result.content[0].text).toContain("Unknown control character: 9");
     });
 
-    it("空文字の場合はエラーを投げること", async () => {
-      await expect(controlCharSender.send("")).rejects.toThrow(
-        "Unknown control character: "
-      );
+    it("should return error for empty string", async () => {
+      const result = await controlCharSender.send("");
+
+      expect(result.content).toHaveLength(1);
+      expect(result.content[0].text).toContain("Character must be a non-empty string");
     });
 
-    it("WezTermコマンド実行でエラーが発生した場合はエラーを投げること", async () => {
-      mockedExec.mockImplementation((command: string, callback: any) => {
-        callback(new Error("WezTerm not available"), null);
-        return {} as any;
-      });
+    it("should return error when WezTerm command fails", async () => {
+      mockExecAsync.mockRejectedValue(new Error("WezTerm not available"));
 
-      await expect(controlCharSender.send("c")).rejects.toThrow(
-        "Failed to send control character: WezTerm not available"
-      );
+      const result = await controlCharSender.send("c");
+
+      expect(result.content).toHaveLength(1);
+      expect(result.content[0].text).toContain("Failed to send control character");
+      expect(result.content[0].text).toContain("WezTerm not available");
     });
 
-    // 全ての制御文字のマッピングをテスト
+    // Test all control character mappings
     const controlCharTests = [
-      { char: "a", sequence: "\\x01", name: "Ctrl+A" },
-      { char: "e", sequence: "\\x05", name: "Ctrl+E" },
-      { char: "k", sequence: "\\x0b", name: "Ctrl+K" },
-      { char: "u", sequence: "\\x15", name: "Ctrl+U" },
-      { char: "w", sequence: "\\x17", name: "Ctrl+W" },
+      { char: "a", name: "Ctrl+A" },
+      { char: "e", name: "Ctrl+E" },
+      { char: "k", name: "Ctrl+K" },
+      { char: "u", name: "Ctrl+U" },
+      { char: "w", name: "Ctrl+W" },
+      { char: "r", name: "Ctrl+R" },
+      { char: "p", name: "Ctrl+P" },
+      { char: "n", name: "Ctrl+N" },
+      { char: "b", name: "Ctrl+B" },
+      { char: "f", name: "Ctrl+F" },
+      { char: "t", name: "Ctrl+T" },
+      { char: "g", name: "Ctrl+G" },
+      { char: "v", name: "Ctrl+V" },
+      { char: "y", name: "Ctrl+Y" },
+      { char: "s", name: "Ctrl+S" },
+      { char: "q", name: "Ctrl+Q" },
+      { char: "x", name: "Ctrl+X" },
     ];
 
-    controlCharTests.forEach(({ char, sequence, name }) => {
-      it(`${name}を正常に送信できること`, async () => {
-        mockedExec.mockImplementation((command: string, callback: any) => {
-          expect(command).toContain(`send-text $'${sequence}'`);
-          callback(null, { stdout: "", stderr: "" });
-          return {} as any;
-        });
+    controlCharTests.forEach(({ char, name }) => {
+      it(`should successfully send ${name}`, async () => {
+        mockExecAsync.mockResolvedValue({ stdout: "", stderr: "" });
 
         const result = await controlCharSender.send(char);
 

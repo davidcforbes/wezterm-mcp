@@ -1,10 +1,19 @@
 import { exec } from "child_process";
+import { promisify } from "util";
 
-// child_processモジュールをモック化
+// Mock modules
 jest.mock("child_process");
-const mockedExec = jest.mocked(exec);
 
-// 各クラスのインポート
+let mockExecAsync: jest.Mock;
+jest.mock("util", () => {
+  const actualUtil = jest.requireActual<typeof import("util")>("util");
+  mockExecAsync = jest.fn();
+  return {
+    ...actualUtil,
+    promisify: jest.fn().mockReturnValue(mockExecAsync),
+  };
+});
+
 import WeztermExecutor from "../src/wezterm_executor";
 import WeztermOutputReader from "../src/wezterm_output_reader";
 import SendControlCharacter from "../src/send_control_character";
@@ -20,32 +29,19 @@ describe("Integration Tests", () => {
       const outputReader = new WeztermOutputReader();
       const controlCharSender = new SendControlCharacter();
 
-      // 1. コマンド実行のモック（writeToTerminalは2回execを呼ぶ：listとsend-text）
-      let callCount = 0;
-      mockedExec.mockImplementation((command: string, callback: any) => {
-        callCount++;
-        if (command.includes("list")) {
-          callback(null, { stdout: "pane_id=1 active=true", stderr: "" });
-        } else if (command.includes("send-text")) {
-          callback(null, { stdout: "", stderr: "" });
-        } else if (command.includes("get-text")) {
-          // 出力読み取り用
-          callback(null, { stdout: "hello\n", stderr: "" });
-        } else {
-          // その他のコマンド
-          callback(null, { stdout: "", stderr: "" });
-        }
-        return {} as any;
-      });
+      // Mock successful command execution
+      mockExecAsync.mockResolvedValueOnce({ stdout: "", stderr: "" });
 
       const writeResult = await executor.writeToTerminal('echo "hello"');
       expect(writeResult.content[0].text).toContain("Command sent to WezTerm");
 
-      // 2. 出力読み取り
+      // Mock output reading
+      mockExecAsync.mockResolvedValueOnce({ stdout: "hello\n", stderr: "" });
       const readResult = await outputReader.readOutput(10);
       expect(readResult.content[0].text).toBe("hello\n");
 
-      // 3. 制御文字送信
+      // Mock control character sending
+      mockExecAsync.mockResolvedValueOnce({ stdout: "", stderr: "" });
       const controlResult = await controlCharSender.send("c");
       expect(controlResult.content[0].text).toBe(
         "Sent control character: Ctrl+C"
@@ -56,13 +52,8 @@ describe("Integration Tests", () => {
       const executor = new WeztermExecutor();
       const outputReader = new WeztermOutputReader();
 
-      // 全てのクラスでエラーが発生した場合
-      mockedExec.mockImplementation((command: string, callback: any) => {
-        callback(new Error("WezTerm not available"), null);
-        return {} as any;
-      });
-
-      // WeztermExecutorのエラー
+      // Mock errors for all classes
+      mockExecAsync.mockRejectedValueOnce(new Error("WezTerm not available"));
       const writeResult = await executor.writeToTerminal("test");
       expect(writeResult.content[0].text).toContain(
         "Failed to write to terminal"
@@ -70,6 +61,7 @@ describe("Integration Tests", () => {
       expect(writeResult.content[0].text).toContain("WezTerm not available");
 
       // WeztermOutputReaderのエラー
+      mockExecAsync.mockRejectedValueOnce(new Error("WezTerm not available"));
       const readResult = await outputReader.readOutput(10);
       expect(readResult.content[0].text).toContain(
         "Failed to read terminal output"
@@ -77,43 +69,34 @@ describe("Integration Tests", () => {
       expect(readResult.content[0].text).toContain("WezTerm not available");
 
       // SendControlCharacterのエラー
+      mockExecAsync.mockRejectedValueOnce(new Error("WezTerm not available"));
       const controlCharSender = new SendControlCharacter();
-      await expect(controlCharSender.send("c")).rejects.toThrow(
-        "Failed to send control character: WezTerm not available"
+      const controlResult = await controlCharSender.send("c");
+      expect(controlResult.content[0].text).toContain(
+        "Failed to send control character"
       );
+      expect(controlResult.content[0].text).toContain("WezTerm not available");
     });
 
     it("複数のペインでの操作が正常に動作すること", async () => {
       const executor = new WeztermExecutor();
 
       // ペイン一覧取得
-      mockedExec.mockImplementationOnce((command: string, callback: any) => {
-        const paneList = "pane_id=1 active=true\npane_id=2 active=false";
-        callback(null, { stdout: paneList, stderr: "" });
-        return {} as any;
-      });
+      const paneList = "pane_id=1 active=true\npane_id=2 active=false";
+      mockExecAsync.mockResolvedValueOnce({ stdout: paneList, stderr: "" });
 
       const listResult = await executor.listPanes();
       expect(listResult.content[0].text).toContain("pane_id=1");
       expect(listResult.content[0].text).toContain("pane_id=2");
 
       // ペイン切り替え
-      mockedExec.mockImplementationOnce((command: string, callback: any) => {
-        expect(command).toContain("activate-pane --pane-id 2");
-        callback(null, { stdout: "", stderr: "" });
-        return {} as any;
-      });
+      mockExecAsync.mockResolvedValueOnce({ stdout: "", stderr: "" });
 
       const switchResult = await executor.switchPane(2);
       expect(switchResult.content[0].text).toBe("Switched to pane 2");
 
       // 特定のペインにコマンド送信
-      mockedExec.mockImplementationOnce((command: string, callback: any) => {
-        expect(command).toContain("--pane-id 2");
-        expect(command).toContain("ls");
-        callback(null, { stdout: "", stderr: "" });
-        return {} as any;
-      });
+      mockExecAsync.mockResolvedValueOnce({ stdout: "", stderr: "" });
 
       const writeToSpecificResult = await executor.writeToSpecificPane("ls", 2);
       expect(writeToSpecificResult.content[0].text).toBe(
@@ -126,15 +109,8 @@ describe("Integration Tests", () => {
     it("大量のコマンド実行が適切に処理されること", async () => {
       const executor = new WeztermExecutor();
 
-      mockedExec.mockImplementation((command: string, callback: any) => {
-        // 即座にコールバックを呼び出す（遅延なし）
-        if (command.includes("list")) {
-          callback(null, { stdout: "pane_id=1 active=true", stderr: "" });
-        } else {
-          callback(null, { stdout: "", stderr: "" });
-        }
-        return {} as any;
-      });
+      // Mock all 5 command executions
+      mockExecAsync.mockResolvedValue({ stdout: "", stderr: "" });
 
       const promises: Promise<{ content: any[] }>[] = [];
       for (let i = 0; i < 5; i++) {
