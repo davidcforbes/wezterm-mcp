@@ -140,6 +140,12 @@ The following security measures **are** implemented:
    - Potential for resource exhaustion
    - No throttling mechanism
 
+5. **Limited Concurrency Protection**
+   - MCP server processes requests sequentially by default
+   - Multiple rapid commands may interleave at WezTerm CLI level
+   - No explicit command queuing or mutex mechanisms
+   - Mitigated by: single-threaded MCP protocol, promise-based async execution, WezTerm mux server serialization
+
 ## Reporting Security Issues
 
 If you discover a security vulnerability in this project, please report it privately:

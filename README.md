@@ -63,6 +63,36 @@ return {
 
 4. **Verify connectivity**: Run `wezterm cli list` in terminal - should list panes without error
 
+## Environment Variables
+
+### WEZTERM_CLI_PATH
+
+By default, this MCP server uses `wezterm cli` to communicate with WezTerm. If you have WezTerm installed in a non-standard location or need to use a specific version, you can configure the CLI path using the `WEZTERM_CLI_PATH` environment variable.
+
+**Usage**:
+
+```json
+{
+  "mcpServers": {
+    "wezterm-mcp": {
+      "command": "npx",
+      "args": ["-y", "wezterm-mcp"],
+      "env": {
+        "WEZTERM_CLI_PATH": "/custom/path/to/wezterm cli"
+      }
+    }
+  }
+}
+```
+
+**Examples**:
+
+- **Custom installation path**: `"WEZTERM_CLI_PATH": "/opt/wezterm/bin/wezterm cli"`
+- **Specific version**: `"WEZTERM_CLI_PATH": "/usr/local/wezterm-20231231/bin/wezterm cli"`
+- **Windows custom path**: `"WEZTERM_CLI_PATH": "C:\\Program Files\\WezTerm\\wezterm.exe cli"`
+
+If not set, defaults to `wezterm cli` (requires wezterm in PATH).
+
 ## Available Tools
 
 ### write_to_terminal
