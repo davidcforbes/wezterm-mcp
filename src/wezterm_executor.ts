@@ -41,7 +41,7 @@ export default class WeztermExecutor {
     });
   }
 
-  async writeToTerminal(command: string): Promise<{ content: any[] }> {
+  async writeToTerminal(command: string): Promise<{ content: any[]; isError?: boolean }> {
     try {
       // Validate input
       if (typeof command !== "string") {
@@ -69,6 +69,7 @@ export default class WeztermExecutor {
       };
     } catch (error: any) {
       return {
+        isError: true,
         content: [
           {
             type: "text",
@@ -96,7 +97,7 @@ For more help, see: https://wezfurlong.org/wezterm/cli/cli/send-text.html`,
   async writeToSpecificPane(
     command: string,
     paneId: number
-  ): Promise<{ content: any[] }> {
+  ): Promise<{ content: any[]; isError?: boolean }> {
     try {
       // Validate inputs
       if (typeof command !== "string") {
@@ -127,6 +128,7 @@ For more help, see: https://wezfurlong.org/wezterm/cli/cli/send-text.html`,
       };
     } catch (error: any) {
       return {
+        isError: true,
         content: [
           {
             type: "text",
@@ -152,7 +154,7 @@ For more help, see: https://wezfurlong.org/wezterm/cli/cli/send-text.html`,
     }
   }
 
-  async listPanes(): Promise<{ content: any[] }> {
+  async listPanes(): Promise<{ content: any[]; isError?: boolean }> {
     try {
       const args = [...this.weztermCli.split(" "), "list"];
       const escapedCommand = shellQuote.quote(args);
@@ -169,6 +171,7 @@ For more help, see: https://wezfurlong.org/wezterm/cli/cli/send-text.html`,
       };
     } catch (error: any) {
       return {
+        isError: true,
         content: [
           {
             type: "text",
@@ -193,7 +196,7 @@ For more help, see: https://wezfurlong.org/wezterm/cli/cli/list.html`,
     }
   }
 
-  async switchPane(paneId: number): Promise<{ content: any[] }> {
+  async switchPane(paneId: number): Promise<{ content: any[]; isError?: boolean }> {
     try {
       // Validate input
       this.validatePaneId(paneId);
@@ -218,6 +221,7 @@ For more help, see: https://wezfurlong.org/wezterm/cli/cli/list.html`,
       };
     } catch (error: any) {
       return {
+        isError: true,
         content: [
           {
             type: "text",

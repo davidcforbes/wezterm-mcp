@@ -60,7 +60,7 @@ export default class SendControlCharacter {
     }
   }
 
-  async send(character: string): Promise<{ content: any[] }> {
+  async send(character: string): Promise<{ content: any[]; isError?: boolean }> {
     try {
       // Validate input
       this.validateCharacter(character);
@@ -90,6 +90,7 @@ export default class SendControlCharacter {
       };
     } catch (error: any) {
       return {
+        isError: true,
         content: [
           {
             type: "text",

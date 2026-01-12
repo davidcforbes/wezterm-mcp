@@ -35,7 +35,7 @@ export default class WeztermOutputReader {
     }
   }
 
-  async readOutput(lines: number = DEFAULT_OUTPUT_LINES): Promise<{ content: any[] }> {
+  async readOutput(lines: number = DEFAULT_OUTPUT_LINES): Promise<{ content: any[]; isError?: boolean }> {
     try {
       // Validate input
       this.validateLines(lines);
@@ -74,6 +74,7 @@ export default class WeztermOutputReader {
       };
     } catch (error: any) {
       return {
+        isError: true,
         content: [
           {
             type: "text",
