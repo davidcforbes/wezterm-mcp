@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "wezterm-local": {
+      "command": "node",
+      "args": ["C:\\Development\\wezterm-mcp\\build\\index.js"],
+      "env": {
+        "WEZTERM_CLI_PATH": "wezterm cli"
+      }
+    }
+  }
+}

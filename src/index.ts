@@ -8,7 +8,7 @@ import {
 import WeztermExecutor from "./wezterm_executor.js";
 import WeztermOutputReader from "./wezterm_output_reader.js";
 import SendControlCharacter from "./send_control_character.js";
-import { getErrorMessage } from "./types";
+import { getErrorMessage } from "./types.js";
 
 const server = new Server(
   {

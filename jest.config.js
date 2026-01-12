@@ -21,6 +21,11 @@ export default {
     ],
   },
 
+  // モジュール名のマッピング（.js拡張子を.tsに解決）
+  moduleNameMapper: {
+    "^(\\.{1,2}/.*)\\.js$": "$1",
+  },
+
   // カバレッジ設定
   collectCoverageFrom: [
     "src/**/*.ts",
