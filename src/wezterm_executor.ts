@@ -94,6 +94,22 @@ For more help, see: https://wezfurlong.org/wezterm/cli/cli/send-text.html`,
     }
   }
 
+  /**
+   * Writes a command to a specific WezTerm pane by ID and executes it.
+   * The command is automatically terminated with a newline character.
+   *
+   * @param command - The command string to send to the terminal
+   * @param paneId - The ID of the target pane (non-negative integer)
+   * @returns Promise resolving to MCP response with confirmation or error details
+   * @throws Error if command is not a string or paneId is invalid
+   *
+   * @example
+   * ```typescript
+   * const executor = new WeztermExecutor();
+   * const result = await executor.writeToSpecificPane("npm test", 2);
+   * console.log(result.content[0].text); // "Command sent to pane 2: npm test"
+   * ```
+   */
   async writeToSpecificPane(
     command: string,
     paneId: number
@@ -154,6 +170,19 @@ For more help, see: https://wezfurlong.org/wezterm/cli/cli/send-text.html`,
     }
   }
 
+  /**
+   * Lists all panes in the current WezTerm window.
+   * Returns pane IDs, active status, titles, and other metadata.
+   *
+   * @returns Promise resolving to MCP response with pane listing or error details
+   *
+   * @example
+   * ```typescript
+   * const executor = new WeztermExecutor();
+   * const result = await executor.listPanes();
+   * console.log(result.content[0].text); // Outputs pane list from wezterm cli
+   * ```
+   */
   async listPanes(): Promise<{ content: any[]; isError?: boolean }> {
     try {
       const args = [...this.weztermCli.split(" "), "list"];
@@ -196,6 +225,21 @@ For more help, see: https://wezfurlong.org/wezterm/cli/cli/list.html`,
     }
   }
 
+  /**
+   * Switches focus to a specific WezTerm pane by ID.
+   * Activates the target pane, making it the active pane for subsequent operations.
+   *
+   * @param paneId - The ID of the pane to switch to (non-negative integer)
+   * @returns Promise resolving to MCP response with confirmation or error details
+   * @throws Error if paneId is invalid
+   *
+   * @example
+   * ```typescript
+   * const executor = new WeztermExecutor();
+   * const result = await executor.switchPane(2);
+   * console.log(result.content[0].text); // "Switched to pane 2"
+   * ```
+   */
   async switchPane(paneId: number): Promise<{ content: any[]; isError?: boolean }> {
     try {
       // Validate input

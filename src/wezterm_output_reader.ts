@@ -35,6 +35,26 @@ export default class WeztermOutputReader {
     }
   }
 
+  /**
+   * Reads terminal output from the active WezTerm pane.
+   * Can retrieve a specified number of lines from scrollback or all current screen content.
+   *
+   * @param lines - Number of lines to read (default: 50, max: 10000, 0 or negative: all screen content)
+   * @returns Promise resolving to MCP response with terminal output or error details
+   * @throws Error if lines parameter is invalid (not an integer or exceeds 10000)
+   *
+   * @example
+   * ```typescript
+   * const reader = new WeztermOutputReader();
+   * // Read last 100 lines
+   * const result = await reader.readOutput(100);
+   * console.log(result.content[0].text); // Terminal output
+   * 
+   * // Read all current screen content
+   * const screenResult = await reader.readOutput(0);
+   * ```
+   */
+
   async readOutput(lines: number = DEFAULT_OUTPUT_LINES): Promise<{ content: any[]; isError?: boolean }> {
     try {
       // Validate input

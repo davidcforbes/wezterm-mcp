@@ -60,6 +60,26 @@ export default class SendControlCharacter {
     }
   }
 
+  /**
+   * Sends a control character (Ctrl+key) to the active WezTerm pane.
+   * Supports common control characters like Ctrl+C, Ctrl+D, Ctrl+Z, etc.
+   *
+   * @param character - Single lowercase letter (a-z, excluding h, i, j, m, o) representing the control key
+   * @returns Promise resolving to MCP response with confirmation or error details
+   * @throws Error if character is invalid or not in the supported set
+   *
+   * @example
+   * ```typescript
+   * const sender = new SendControlCharacter();
+   * // Send Ctrl+C to interrupt a process
+   * const result = await sender.send("c");
+   * console.log(result.content[0].text); // "Sent control character: Ctrl+C"
+   * 
+   * // Send Ctrl+D to send EOF
+   * await sender.send("d");
+   * ```
+   */
+
   async send(character: string): Promise<{ content: any[]; isError?: boolean }> {
     try {
       // Validate input
