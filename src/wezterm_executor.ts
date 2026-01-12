@@ -1,6 +1,7 @@
 import { exec } from "child_process";
 import { promisify } from "util";
 import * as shellQuote from "shell-quote";
+import { McpResponse, getErrorMessage } from "./types";
 
 const execAsync = promisify(exec);
 
@@ -41,7 +42,7 @@ export default class WeztermExecutor {
     });
   }
 
-  async writeToTerminal(command: string): Promise<{ content: any[]; isError?: boolean }> {
+  async writeToTerminal(command: string): Promise<McpResponse> {
     try {
       // Validate input
       if (typeof command !== "string") {
@@ -67,13 +68,13 @@ export default class WeztermExecutor {
           },
         ],
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         isError: true,
         content: [
           {
             type: "text",
-            text: `Failed to write to terminal: ${error.message}
+            text: `Failed to write to terminal: ${getErrorMessage(error)}
 
 Troubleshooting Steps:
 1. Verify WezTerm is running with an active terminal session
@@ -113,7 +114,7 @@ For more help, see: https://wezfurlong.org/wezterm/cli/cli/send-text.html`,
   async writeToSpecificPane(
     command: string,
     paneId: number
-  ): Promise<{ content: any[]; isError?: boolean }> {
+  ): Promise<McpResponse> {
     try {
       // Validate inputs
       if (typeof command !== "string") {
@@ -142,13 +143,13 @@ For more help, see: https://wezfurlong.org/wezterm/cli/cli/send-text.html`,
           },
         ],
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         isError: true,
         content: [
           {
             type: "text",
-            text: `Failed to write to pane ${paneId}: ${error.message}
+            text: `Failed to write to pane ${paneId}: ${getErrorMessage(error)}
 
 Troubleshooting Steps:
 1. Verify pane ${paneId} exists: use list_panes tool to see all pane IDs
@@ -198,13 +199,13 @@ For more help, see: https://wezfurlong.org/wezterm/cli/cli/send-text.html`,
           },
         ],
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         isError: true,
         content: [
           {
             type: "text",
-            text: `Failed to list panes: ${error.message}
+            text: `Failed to list panes: ${getErrorMessage(error)}
 
 Troubleshooting Steps:
 1. Verify WezTerm is running with at least one window open
@@ -263,13 +264,13 @@ For more help, see: https://wezfurlong.org/wezterm/cli/cli/list.html`,
           },
         ],
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         isError: true,
         content: [
           {
             type: "text",
-            text: `Failed to switch pane: ${error.message}
+            text: `Failed to switch pane: ${getErrorMessage(error)}
 
 Troubleshooting Steps:
 1. Verify pane ${paneId} exists: use list_panes tool to see all pane IDs

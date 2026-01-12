@@ -1,6 +1,7 @@
 import { exec } from "child_process";
 import { promisify } from "util";
 import * as shellQuote from "shell-quote";
+import { McpResponse, getErrorMessage } from "./types";
 
 const execAsync = promisify(exec);
 
@@ -80,7 +81,7 @@ export default class SendControlCharacter {
    * ```
    */
 
-  async send(character: string): Promise<{ content: any[]; isError?: boolean }> {
+  async send(character: string): Promise<McpResponse> {
     try {
       // Validate input
       this.validateCharacter(character);
@@ -108,13 +109,13 @@ export default class SendControlCharacter {
           },
         ],
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         isError: true,
         content: [
           {
             type: "text",
-            text: `Failed to send control character: ${error.message}
+            text: `Failed to send control character: ${getErrorMessage(error)}
 
 Troubleshooting Steps:
 1. Verify WezTerm is running with an active terminal session

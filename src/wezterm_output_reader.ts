@@ -1,6 +1,7 @@
 import { exec } from "child_process";
 import { promisify } from "util";
 import * as shellQuote from "shell-quote";
+import { McpResponse, getErrorMessage } from "./types";
 
 const execAsync = promisify(exec);
 
@@ -55,7 +56,7 @@ export default class WeztermOutputReader {
    * ```
    */
 
-  async readOutput(lines: number = DEFAULT_OUTPUT_LINES): Promise<{ content: any[]; isError?: boolean }> {
+  async readOutput(lines: number = DEFAULT_OUTPUT_LINES): Promise<McpResponse> {
     try {
       // Validate input
       this.validateLines(lines);
@@ -92,13 +93,13 @@ export default class WeztermOutputReader {
           },
         ],
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         isError: true,
         content: [
           {
             type: "text",
-            text: `Failed to read terminal output: ${error.message}
+            text: `Failed to read terminal output: ${getErrorMessage(error)}
 
 Troubleshooting Steps:
 1. Verify WezTerm is running and you have an active terminal session

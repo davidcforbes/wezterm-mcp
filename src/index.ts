@@ -8,6 +8,7 @@ import {
 import WeztermExecutor from "./wezterm_executor.js";
 import WeztermOutputReader from "./wezterm_output_reader.js";
 import SendControlCharacter from "./send_control_character.js";
+import { getErrorMessage } from "./types";
 
 const server = new Server(
   {
@@ -183,13 +184,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request: any) => {
       default:
         throw new Error(`Unknown tool: ${request.params.name}`);
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Return errors in content format for consistency
     return {
       content: [
         {
           type: "text",
-          text: `Error: ${error.message}`,
+          text: `Error: ${getErrorMessage(error)}`,
         },
       ],
       isError: true,
